@@ -1,4 +1,4 @@
 .cache
 node_modules
-dist
+#dist - Netlify doesn't support Rust / WASM building
 build
