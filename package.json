@@ -1,0 +1,36 @@
+{
+  "name": "mandelweb",
+  "version": "1.0.0",
+  "description": "An interactive Mandelbrot Set viewer, with the Mandelbrot Set rendering done in Rust using WASM and HTML5 Canvas (with JS, CSS and HTML for everything else).",
+  "main": "code.js",
+  "scripts": {
+    "dev": "parcel src/index.html",
+    "build": "sh build.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oojmed/MandelWeb.git"
+  },
+  "keywords": [
+    "mandelbrot",
+    "fractal"
+  ],
+  "author": "Oojmed",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/oojmed/MandelWeb/issues"
+  },
+  "homepage": "https://github.com/oojmed/MandelWeb#readme",
+  "devDependencies": {
+    "parcel-bundler": "^1.12.4",
+    "parcel-plugin-wasm.rs": "^1.2.16",
+    "workbox-build": "^5.0.0",
+    "workbox-expiration": "^5.0.0",
+    "workbox-precaching": "^5.0.0",
+    "workbox-routing": "^5.0.0",
+    "workbox-strategies": "^5.0.0"
+  },
+  "browserslist": [
+    "last 1 Chrome versions"
+  ]
+}
