@@ -53,6 +53,45 @@ document.onkeyup = function(e) {
   keys[key] = false;
 };
 
+let dragging = false;
+let lastDragX = 0;
+let lastDragY = 0;
+
+function mouseDownHandler(e) {
+  dragging = true;
+
+  lastDragX = e.clientX;
+  lastDragY = e.clientY;
+
+  //WasmHandler.setHandlerSetting('combineMultithreadedData', true);
+}
+
+function mouseMoveHandler(e) {
+  if (!dragging) return;
+
+  let x = e.clientX;
+  let y = e.clientY;
+
+  let diffX = x - lastDragX;
+  let diffY = y - lastDragY;
+
+  xCam -= diffX / 400;
+  yCam -= diffY / 400;
+
+  lastDragX = x;
+  lastDragY = y;
+}
+
+function mouseUpHandler(e) {
+  dragging = false;
+
+  //WasmHandler.setHandlerSetting('combineMultithreadedData', false);
+}
+
+document.onmousedown = mouseDownHandler;
+document.onmousemove = mouseMoveHandler;
+document.onmouseup = mouseUpHandler;
+
 let lastUpdateTime = performance.now();
 
 let panAmount = 0.01;
@@ -68,28 +107,42 @@ async function update() {
 
   fps = Math.round(1 / deltaTime);
 
+  let receivingGoodInput = false;
+
   if (keys['w'] || keys['arrowup']) {
     yCam -= scalePanAmount();
+
+    receivingGoodInput = true;
   }
 
   if (keys['s'] || keys['arrowdown']) {
     yCam += scalePanAmount();
+
+    receivingGoodInput = true;
   }
 
   if (keys['a'] || keys['arrowleft']) {
     xCam -= scalePanAmount();
+
+    receivingGoodInput = true;
   }
 
   if (keys['d'] || keys['arrowright']) {
     xCam += scalePanAmount();
+
+    receivingGoodInput = true;
   }
 
   if (keys['z']) {
     scale *= 0.99;
+
+    receivingGoodInput = true;
   }
 
   if (keys['x']) {
     scale *= 1.01;
+
+    receivingGoodInput = true;
   }
 
   await WasmHandler.renderFrame(width, height, xCam, yCam, scale);
@@ -97,8 +150,6 @@ async function update() {
   frame++;
 
   drawDebug();
-
-  //renderText(4, 14, 12, 'black', `${frame} | ${(performance.now() - startTime).toFixed(2)}ms ${fps} | ${xCam.toFixed(2)} ${yCam.toFixed(2)} | ${scale.toFixed(2)}`, 'left');
 
   requestAnimationFrame(update);
 }
@@ -121,11 +172,17 @@ linesBetweenEl.oninput = () => {
   WasmHandler.setWorkerSettings('linesBetweenMultithreadColumns', linesBetweenEl.checked);
 };
 
+let combineDataEl = document.getElementById('combineData');
+
+combineDataEl.oninput = () => {
+  WasmHandler.setHandlerSetting('combineMultithreadedData', combineDataEl.checked);
+};
+
 async function drawDebug() {
   debugEl.textContent = `F: ${frame} FPS: ${fps}
 Camera Position: ${xCam.toFixed(2)}, ${yCam.toFixed(2)} Scale: ${scale.toFixed(2)}
 Resolution: Scaled: ${width}x${height}, Scale Factor: ${scaleFactor}, Raw: ${window.innerWidth}x${window.innerHeight}
-Multithreading: ${WasmHandler.multithreading} - ${WasmHandler.multithreadingAmount}
+Multithreading: ${WasmHandler.multithreading}, Workers: ${WasmHandler.multithreadingAmount}, Combine Multithreaded Data: ${WasmHandler.combineMultithreadedData}
 `;
 }
 
