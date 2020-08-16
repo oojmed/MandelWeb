@@ -2,7 +2,7 @@ import * as WasmHandler from './wasmHandler';
 
 (async function () { let canvas, ctx;
 
-let scaleFactor = 2;
+let scaleFactor = 2.5;
 
 let width = 0;
 let height = 0;

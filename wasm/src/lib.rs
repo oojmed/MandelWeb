@@ -38,7 +38,7 @@ fn scale_y(y: f32, height: f32, yCam: f32, scale: f32) -> f32 { // 0..y..height 
   (((y / (height / 2.0)) - 1.0)) * scale + yCam
 }
 
-static MAX_ITERATION: u32 = 100;
+static MAX_ITERATION: u32 = 80;
 static MAX_ITERATION_SCALE: f32 = 255.0 / (MAX_ITERATION as f32);
 
 fn calc_pixel(pX: u32, pY: u32, width: u32, height: u32, xCam: f32, yCam: f32, scale: f32) -> u32 {
