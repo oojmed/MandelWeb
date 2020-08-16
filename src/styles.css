@@ -17,8 +17,6 @@ body > canvas {
     left: 0;
 
     image-rendering: pixelated;
-
-    border: 1px solid #555555;
 }
 
 #settings {
@@ -47,5 +45,5 @@ input {
     font-family: monospace;
     white-space: pre;
 
-    font-size: 1vw;
+    font-size: .5vw;
 }
