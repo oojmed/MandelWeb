@@ -61,14 +61,12 @@ fn calc_pixel(pX: u32, pY: u32, width: u32, height: u32, xCam: f32, yCam: f32, s
   iteration
 }
 
-fn gen_rgb_from_iteration(iteration: u32) -> (u8, u8, u8) {
-  let main: u8 = ((iteration as f32) * MAX_ITERATION_SCALE).round() as u8;
-
-  (main, main, 255)
+fn gen_color_from_iteration(iteration: u32) -> u8 {
+  ((iteration as f32) * MAX_ITERATION_SCALE).round() as u8
 }
 
 #[wasm_bindgen]
-pub fn gen_data(renderWidth: u32, actualWidth: u32, xOffset: u32, height: u32, xCam: f32, yCam: f32, scale: f32) -> Uint8ClampedArray { //Vec<u8> {
+pub fn gen_data(linesBetweenColumns: bool, renderWidth: u32, actualWidth: u32, xOffset: u32, height: u32, xCam: f32, yCam: f32, scale: f32) -> Uint8ClampedArray { //Vec<u8> {
   //let mut data: Vec<u8> = Vec::new();
   let mut data: Uint8ClampedArray = Uint8ClampedArray::new_with_length(renderWidth * height * 4);
 
@@ -77,12 +75,12 @@ pub fn gen_data(renderWidth: u32, actualWidth: u32, xOffset: u32, height: u32, x
     for x in 0..renderWidth {
       let iteration = calc_pixel(x + xOffset, y, actualWidth, height, xCam, yCam, scale);
 
-      let (r, g, b) = gen_rgb_from_iteration(iteration);
+      let color = gen_color_from_iteration(iteration);
 
-      data.set_index(i, r);
-      data.set_index(i + 1, g);
-      data.set_index(i + 2, b);
-      data.set_index(i + 3, 255);
+      data.set_index(i, color);
+      data.set_index(i + 1, color);
+      data.set_index(i + 2, 255);
+      data.set_index(i + 3, if linesBetweenColumns && x == renderWidth - 1 { 0 } else { 255 });
 
       i += 4;
 

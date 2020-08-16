@@ -2,7 +2,7 @@ import * as WasmHandler from './wasmHandler';
 
 (async function () { let canvas, ctx;
 
-let scaleFactor = 2.5;
+let scaleFactor = 2;
 
 let width = 0;
 let height = 0;
@@ -17,7 +17,7 @@ let scale = 1.2;
 
 let keys = [];
 
-function upscaleCanvas() {
+function scaleCanvas() {
   width = Math.floor(window.innerWidth / scaleFactor);
   height = Math.floor(window.innerHeight / scaleFactor);
 
@@ -28,25 +28,13 @@ function upscaleCanvas() {
   canvas.style.height = `${window.innerHeight}px`;
 }
 
-function renderText(x, startY, size, color, text, align = 'center', lineSpacing = 5) {
-  ctx.font = `${size}px Roboto`;
-  ctx.fillStyle = color;
-  ctx.textAlign = align;
-
-  let newlineSplit = text.split('\n');
-  for (let i = 0; i < newlineSplit.length; i++) {
-    let y = startY + (i * (size + lineSpacing));
-    ctx.fillText(newlineSplit[i], x, y);
-  }
-}
-
 canvas = document.getElementById('canvas');
 ctx = canvas.getContext('2d');
 
 await WasmHandler.init(ctx);
 
-upscaleCanvas();
-window.onresize = upscaleCanvas;
+scaleCanvas();
+window.onresize = scaleCanvas;
   
 document.oncontextmenu = function(e) {
   e.preventDefault();
@@ -104,13 +92,41 @@ async function update() {
     scale *= 1.01;
   }
 
-  await WasmHandler.renderFrame(width, height, xCam, yCam, scale, `${frame} ${fps} | ${xCam.toFixed(2)} ${yCam.toFixed(2)} | ${scale.toFixed(2)}`);
+  await WasmHandler.renderFrame(width, height, xCam, yCam, scale);
 
   frame++;
+
+  drawDebug();
 
   //renderText(4, 14, 12, 'black', `${frame} | ${(performance.now() - startTime).toFixed(2)}ms ${fps} | ${xCam.toFixed(2)} ${yCam.toFixed(2)} | ${scale.toFixed(2)}`, 'left');
 
   requestAnimationFrame(update);
+}
+
+let debugEl = document.getElementById('debug');
+
+let resScaleEl = document.getElementById('resScale');
+let resScaleTextEl = document.getElementById('resScaleText');
+
+resScaleEl.oninput = () => {
+  scaleFactor = resScaleEl.value;
+  resScaleTextEl.textContent = scaleFactor;
+
+  scaleCanvas();
+};
+
+let linesBetweenEl = document.getElementById('linesBetween');
+
+linesBetweenEl.oninput = () => {
+  WasmHandler.setWorkerSettings('linesBetweenMultithreadColumns', linesBetweenEl.checked);
+};
+
+async function drawDebug() {
+  debugEl.textContent = `F: ${frame} FPS: ${fps}
+Camera Position: ${xCam.toFixed(2)}, ${yCam.toFixed(2)} Scale: ${scale.toFixed(2)}
+Resolution: Scaled: ${width}x${height}, Scale Factor: ${scaleFactor}, Raw: ${window.innerWidth}x${window.innerHeight}
+Multithreading: ${WasmHandler.multithreading} - ${WasmHandler.multithreadingAmount}
+`;
 }
 
 update();
