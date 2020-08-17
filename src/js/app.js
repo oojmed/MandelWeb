@@ -241,7 +241,7 @@ let autozoomSpeedEl = document.getElementById('autozoomSpeed');
 
 autozoomSpeedEl.oninput = () => {
   autozoomSpeed = autozoomSpeedEl.value;
-  autozoom.deltaY = -autozoomSpeed;
+  if (autozoom !== false) autozoom.deltaY = -autozoomSpeed;
 }
 
 let linesBetweenEl = document.getElementById('linesBetween');
