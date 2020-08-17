@@ -17,6 +17,10 @@ let scale = 1.2;
 
 let keys = [];
 
+let autozoom = false;
+let autozoomSpeed = 1;
+let autozoomInterval;
+
 function scaleCanvas() {
   width = Math.floor(window.innerWidth / scaleFactor);
   height = Math.floor(window.innerHeight / scaleFactor);
@@ -66,6 +70,18 @@ let lastDragX = 0;
 let lastDragY = 0;
 
 function mouseDownHandler(e) {
+  if (e.which === 3) { // Right click - auto zoom
+    if (autozoom === false) {
+      autozoom = {clientX: e.clientX, clientY: e.clientY, deltaY: -autozoomSpeed};
+      autozoomInterval = setInterval(() => { wheelHandler(autozoom); });
+    } else {
+      clearInterval(autozoomInterval);
+      autozoom = false;
+    }
+
+    return;
+  }
+
   dragging = true;
 
   lastDragX = e.clientX;
@@ -132,7 +148,7 @@ function wheelHandler(e) {
   //xCam = xCam - scaleX(e.clientX / window.innerWidth * (sWidthAfter - sWidthBefore));
   //yCam = yCam - scaleY(e.clientY / window.innerHeight * (sHeightAfter - sHeightBefore));
 
-  e.preventDefault();
+  if (e.preventDefault) e.preventDefault();
 }
 
 canvas.onmousedown = mouseDownHandler;
@@ -194,6 +210,7 @@ async function update() {
     receivingGoodInput = true;
   }
 
+
   await WasmHandler.renderFrame(width, height, xCam, yCam, scale);
 
   frame++;
@@ -218,11 +235,14 @@ let maxIterationEl = document.getElementById('maxIteration');
 maxIterationEl.oninput = () => {
   WasmHandler.setWorkerSettings('maxIteration', maxIterationEl.value);
   WasmHandler.setWorkerSettings('maxIterationColorScale', 255 / maxIterationEl.value);
-
-  //scaleFactor = resScaleEl.value;
-
-  //scaleCanvas();
 };
+
+let autozoomSpeedEl = document.getElementById('autozoomSpeed');
+
+autozoomSpeedEl.oninput = () => {
+  autozoomSpeed = autozoomSpeedEl.value;
+  autozoom.deltaY = -autozoomSpeed;
+}
 
 let linesBetweenEl = document.getElementById('linesBetween');
 
