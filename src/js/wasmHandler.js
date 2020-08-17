@@ -1,10 +1,7 @@
-import module from '../../wasm/Cargo.toml';
-
-export let multithreading = true;
 export let combineMultithreadedData = true;
 
 let multithreadingWorkers = [];
-export let multithreadingAmount = navigator.hardwareConcurrency;
+export let multithreadingAmount = navigator.hardwareConcurrency || 4; // Use 4 if can't get CPU core / thread count
 let ctx;
 
 /*let linesBetweenColumns = false;
@@ -16,9 +13,6 @@ const webworkerLoaded = w => new Promise(r => w.addEventListener("message", r, {
 
 export async function setHandlerSetting(name, val) {
   switch (name) {
-    case 'multithreading':
-      multithreading = val;
-      break;
     case 'combineMultithreadedData':
       combineMultithreadedData = val;
       break;
@@ -29,13 +23,19 @@ export async function setWorkerSettings(name, val) {
   for (let i = 0; i < multithreadingAmount; i++) {
     multithreadingWorkers[i].postMessage([name, val]);
   }
+
+  cloneWorkerSettings[name] = val;
 }
 
-export async function init(_ctx) {
+export async function init(_ctx, loadingCallback = () => {}) {
+  loadingCallback('Loading multithreading workers');
+
   ctx = _ctx;
 
   let loads = [];
   for (let i = 0; i < multithreadingAmount; i++) {
+    loadingCallback(`Spawning worker ${i + 1}`);
+
     let worker = new Worker('wasmMultithread.js');
 
     worker.onmessage = handleMultithreaderReturn;
@@ -44,10 +44,18 @@ export async function init(_ctx) {
     loads.push(webworkerLoaded(worker));
   }
 
-  let startTime = performance.now();
-  await Promise.all(loads);
+  //let startTime = performance.now();
 
-  console.log(`${(performance.now() - startTime).toFixed(2)}ms`);
+  for (let i = 0; i < multithreadingAmount; i++) {
+    loadingCallback(`Waiting for worker ${i + 1} to load`);
+    await loads[i];
+  }
+
+  loadingCallback('Loaded all multithreading workers');
+
+  //await Promise.all(loads);
+
+  //console.log(`${(performance.now() - startTime).toFixed(2)}ms`);
 
   //await (new Promise(resolve => setTimeout(resolve, 1000)));
 }
@@ -82,13 +90,6 @@ function handleMultithreaderReturn(e) {
 export async function renderFrame(width, height, xCam, yCam, scale) {
   combineImageData = Array(multithreadingAmount);
   combineImageDataIndex = 0;
-
-  if (!multithreading) {
-    handleMultithreaderReturn({data: [0, width, height, module.gen_data(width, width, 0, height, xCam, yCam, scale)]});
-    //module.render_frame(ctx, width, height, xCam, yCam, scale);
-
-    return;
-  }
 
   let stripWidth = Math.floor(width / multithreadingAmount);
 

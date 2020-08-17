@@ -1,6 +1,6 @@
 {
   "name": "mandelweb",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "An interactive Mandelbrot Set viewer, with the Mandelbrot Set rendering done in Rust using WASM and HTML5 Canvas (with JS, CSS and HTML for everything else).",
   "main": "code.js",
   "scripts": {

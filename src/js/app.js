@@ -10,7 +10,7 @@ let height = 0;
 let frame = 0;
 let fps;
 
-let xCam = -0.5;
+let xCam = 0;
 let yCam = 0;
 
 let scale = 1.2;
@@ -28,10 +28,18 @@ function scaleCanvas() {
   canvas.style.height = `${window.innerHeight}px`;
 }
 
+let loadingEl = document.getElementById('loading');
+
 canvas = document.getElementById('canvas');
 ctx = canvas.getContext('2d');
 
-await WasmHandler.init(ctx);
+WasmHandler.init(ctx, (x) => {
+  loadingEl.textContent = x;
+
+  if (x === 'Loaded all multithreading workers') {
+    loadingEl.className = 'hide';
+  }
+});
 
 scaleCanvas();
 window.onresize = scaleCanvas;
@@ -88,13 +96,54 @@ function mouseUpHandler(e) {
   //WasmHandler.setHandlerSetting('combineMultithreadedData', false);
 }
 
-document.onmousedown = mouseDownHandler;
-document.onmousemove = mouseMoveHandler;
-document.onmouseup = mouseUpHandler;
+function scaleX(x) {
+  return ((x / (width / 3.5)) - 1.75) * scale + xCam;
+}
+
+function scaleY(y) {
+  return (((y / (height / 2.0)) - 1.0)) * scale + yCam;
+}
+
+function wheelHandler(e) {
+  console.log(e);
+
+  let zoom = (e.deltaY * 0.001);
+
+  //xCam -= ((scaleX(e.clientX / scaleFactor) * zoom) - xCam) / scaleFactor;
+
+  let mouseInMandelBeforeX = scaleX(e.clientX / scaleFactor) - xCam;
+  let mouseInMandelBeforeY = scaleY(e.clientY / scaleFactor) - yCam;
+
+  //console.log(mouseInMandelBeforeX);
+
+  scale *= 1 + zoom;
+
+  xCam -= (scaleX(e.clientX / scaleFactor) - xCam) - mouseInMandelBeforeX;
+
+  yCam -= (scaleY(e.clientY / scaleFactor) - yCam) - mouseInMandelBeforeY;
+
+  //let diffX = (scaleX(e.clientX / scaleFactor) - xCam) + mouseInMandelBeforeX;
+  //console.log(diffX)
+
+  //xCam += diffX;
+
+  //xCam -= scaleX(e.clientX) * zoom / scaleFactor;
+
+  //xCam = xCam - scaleX(e.clientX / window.innerWidth * (sWidthAfter - sWidthBefore));
+  //yCam = yCam - scaleY(e.clientY / window.innerHeight * (sHeightAfter - sHeightBefore));
+
+  e.preventDefault();
+}
+
+canvas.onmousedown = mouseDownHandler;
+canvas.onmousemove = mouseMoveHandler;
+canvas.onmouseup = mouseUpHandler;
+
+canvas.onwheel = wheelHandler;
 
 let lastUpdateTime = performance.now();
 
-let panAmount = 0.01;
+let panAmount = 0.02;
 
 function scalePanAmount() {
   return panAmount * scale;
@@ -157,13 +206,22 @@ async function update() {
 let debugEl = document.getElementById('debug');
 
 let resScaleEl = document.getElementById('resScale');
-let resScaleTextEl = document.getElementById('resScaleText');
 
 resScaleEl.oninput = () => {
   scaleFactor = resScaleEl.value;
-  resScaleTextEl.textContent = scaleFactor;
 
   scaleCanvas();
+};
+
+let maxIterationEl = document.getElementById('maxIteration');
+
+maxIterationEl.oninput = () => {
+  WasmHandler.setWorkerSettings('maxIteration', maxIterationEl.value);
+  WasmHandler.setWorkerSettings('maxIterationColorScale', 255 / maxIterationEl.value);
+
+  //scaleFactor = resScaleEl.value;
+
+  //scaleCanvas();
 };
 
 let linesBetweenEl = document.getElementById('linesBetween');
@@ -182,7 +240,7 @@ async function drawDebug() {
   debugEl.textContent = `F: ${frame} FPS: ${fps}
 Camera Position: ${xCam.toFixed(2)}, ${yCam.toFixed(2)} Scale: ${scale.toFixed(2)}
 Resolution: Scaled: ${width}x${height}, Scale Factor: ${scaleFactor}, Raw: ${window.innerWidth}x${window.innerHeight}
-Multithreading: ${WasmHandler.multithreading}, Workers: ${WasmHandler.multithreadingAmount}, Combine Multithreaded Data: ${WasmHandler.combineMultithreadedData}
+Multithreading: Workers: ${WasmHandler.multithreadingAmount}, Combine Multithreaded Data: ${WasmHandler.combineMultithreadedData}
 `;
 }
 
