@@ -2,6 +2,8 @@ export let combineMultithreadedData = true;
 
 let multithreadingWorkers = [];
 export let multithreadingAmount = navigator.hardwareConcurrency || 4; // Use 4 if can't get CPU core / thread count
+export let failedToGetThreadCount = navigator.hardwareConcurrency === undefined;
+
 let ctx;
 
 /*let linesBetweenColumns = false;
@@ -23,12 +25,12 @@ export async function setWorkerSettings(name, val) {
   for (let i = 0; i < multithreadingAmount; i++) {
     multithreadingWorkers[i].postMessage([name, val]);
   }
-
-  cloneWorkerSettings[name] = val;
 }
 
 export async function init(_ctx, loadingCallback = () => {}) {
   loadingCallback('Loading multithreading workers');
+
+  let startTime = performance.now();
 
   ctx = _ctx;
 
@@ -44,14 +46,14 @@ export async function init(_ctx, loadingCallback = () => {}) {
     loads.push(webworkerLoaded(worker));
   }
 
-  //let startTime = performance.now();
-
   for (let i = 0; i < multithreadingAmount; i++) {
     loadingCallback(`Waiting for worker ${i + 1} to load`);
     await loads[i];
   }
 
   loadingCallback('Loaded all multithreading workers');
+
+  return performance.now() - startTime;
 
   //await Promise.all(loads);
 

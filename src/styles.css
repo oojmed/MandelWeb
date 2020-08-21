@@ -24,14 +24,7 @@ body > canvas {
     top: 10px;
     left: 10px;
 
-    background-color: rgba(0, 0, 0, .4);
-    border: 3px solid rgba(50, 50, 50, .4);
-
     padding: 10px;
-
-    user-select: none;
-
-    font-size: 16px;
 
     z-index: 5;
 }
@@ -47,7 +40,7 @@ input {
     font-family: monospace;
     white-space: pre;
 
-    font-size: 16px;
+    font-size: 12px;
 }
 
 #loading {
@@ -55,14 +48,11 @@ input {
     top: 50%;
     left: 50%;
 
-    text-align: center;
-
     padding: 10px;
 
-    font-size: 36px;
+    text-align: center;
 
-    background-color: rgba(0, 0, 0, .4);
-    border: 3px solid rgba(50, 50, 50, .4);
+    font-size: 28px;    
 
     transform: translate(-50%, -50%);
 
@@ -71,4 +61,153 @@ input {
 
 #loading.hide {
     display: none;
+}
+
+#settings, #loading, #locationsContainer, #introduction {
+    background-color: rgba(0, 0, 0, .6);
+    border: 3px solid rgba(50, 50, 50, .6);
+
+    padding: 5px;
+
+    user-select: none;
+}
+
+#introduction {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+
+    transform: translate(-50%, -50%);
+
+    width: 40%;
+    min-width: 300px;
+
+    text-align: center;
+    white-space: pre-wrap;
+
+    z-index: 99;
+}
+
+#locationsContainer {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    
+    padding: 10px;
+    
+    width: 20%;
+}
+
+#locationsContainer > :first-child > h1 {
+    font-size: 16px;
+    width: fit-content;
+
+    margin-bottom: 5px;
+}
+
+#locationsContainer > :first-child > * {
+    margin: 0 auto;
+}
+
+#locationsContainer > :first-child {
+    margin: 0 auto 35px auto;
+
+    width: 93%;
+}
+
+#locationsContainer > :first-child > span {
+    float: left;
+    font-size: 14px;
+}
+
+#locationsContainer > :first-child > input {
+    float: right;
+}
+
+#locations {
+    display: flex;
+
+    flex-direction: row;
+
+    width: 100%;
+
+    flex-flow: row wrap;
+    justify-content: space-between;
+}
+
+#locations > button {
+    margin: 5px 10px 5px 10px;
+
+    padding: 5px;
+
+    cursor: pointer;
+
+    text-align: center;
+
+    color: #fff;
+
+    border: 2px solid rgba(0, 0, 0, .8);
+    background-color: rgba(255, 255, 255, .1);
+
+    font-family: Roboto, sans-serif;
+    font-size: 14px;
+
+    outline: none !important;
+}
+
+#locations > button:hover {
+    background-color: rgba(255, 255, 255, .3);
+}
+
+#locations > button:active {
+    background-color: rgba(255, 255, 255, .5);
+}
+
+#locationInterpolateProgressBar {
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    -webkit-appearance: none;
+    appearance: none;
+
+    width: 100%;
+    height: 15px;
+    
+    border-radius: 0;
+
+    display: none;
+
+    opacity: 0.5;
+}
+
+#locationInterpolateProgressBar.show {
+    display: block;
+}
+
+#locationInterpolateProgressBar::-webkit-progress-bar {
+    background-color: transparent;
+}
+
+#locationInterpolateProgressBar::-webkit-progress-value {
+    background-color: #fff;
+}
+
+kbd {
+    display: inline-block;
+    padding: 3px 5px;
+
+    font: 12px monospace;
+
+    line-height: 11px;
+
+    color: rgb(183, 177, 168);
+
+    vertical-align: middle;
+
+    background-color: rgb(26, 28, 30);
+    border: 1px solid rgb(60, 65, 67);
+
+    border-radius: 6px;
+    box-shadow: inset 0 -1px 0 rgb(47, 51, 53);
 }

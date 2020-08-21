@@ -29,15 +29,51 @@
 <body>
     <canvas id="canvas"></canvas>
 
+    <div id="introduction">
+        Welcome to MandelWeb!
+
+        Clicking this closes this introduction panel, however if you have never used this before it is recommended you read below.
+
+        Keyboard Controls:
+        <kbd>Ctrl</kbd> + <kbd>+</kbd> or <kbd>Z</kbd>: Zoom In
+        <kbd>Ctrl</kbd> + <kbd>-</kbd> or <kbd>X</kbd>: Zoom Out
+
+        <kbd>W</kbd> or <kbd>🠩</kbd>: Move / Pan Up
+        <kbd>A</kbd> or <kbd>🠨</kbd>: Move / Pan Left
+        <kbd>S</kbd> or <kbd>🠫</kbd>: Move / Pan Down
+        <kbd>D</kbd> or <kbd>🠪</kbd>: Move / Pan Right
+
+        <kbd>H</kbd>: Hide Settings Panel (top left)
+        <kbd>Shift</kbd> + <kbd>H</kbd>: Hide Locations (top right)
+    </div>
+
     <div id="settings">
         <div id="debug"></div>
-        Resolution Scale <input type="range" value=2.5 min=0.5 max=5 step=0.1 id="resScale"> <br>
-        Max Iteration <input type="range" value=160 min=5 max=505 step=10 id="maxIteration"> <br> <br>
+        Resolution Scale <input type="range" value=2 min=0.5 max=5 step=0.1 id="resScale"> <br> <br>
+
+        Max Iteration <input type="range" value=1 min=1 max=1500 step=1 id="maxIteration"> <br>
+        Border Tracing <input checked type="checkbox" id="borderTracing"> <br> <br>
+
+        Julia Vector X <input type="range" value=0 min=-2 max=0.5 step=0.01 id="juliaX"> <br>
+        Julia Vector Y <input type="range" value=0 min=-2 max=0.5 step=0.01 id="juliaY"> <br> <br>
 
         Lines Between Multithread Columns <input type="checkbox" id="linesBetween"> <br>
         Combine Multithreading Data <input checked type="checkbox" id="combineData"> <br> <br>
 
         Autozoom Speed <input type="range" value=1 min=-3 max=3 step=0.1 id="autozoomSpeed">
+    </div>
+
+    <progress id="locationInterpolateProgressBar" min=0 value=0 max=1></progress>
+
+    <div id="locationsContainer">
+        <div>
+            <h1>Locations</h1>
+            <span>Transition Speed</span> <input type="range" value=1 min=0.1 max=1.9 step=0.1 id="transitionSpeed">
+        </div>
+
+        <div id="locations">
+
+        </div>
     </div>
 
     <div id="loading">
