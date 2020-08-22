@@ -1,5 +1,18 @@
 # MandelWeb Changelog
 
+## v3.0.1
+
+### UI
+
+- Fixed introduction panel spacing
+
+
+### Rust WASM
+
+- Fixed border tracing being disabled doing nothing
+
+
+
 ## v3.0.0
 
 ### UI

@@ -3,7 +3,7 @@ import * as WasmHandler from './wasmHandler';
 (async function () { let canvas, ctx;
 const timeSinceStart = performance.now();
 
-const version = 'v3.0.0';
+const version = 'v3.0.1';
 
 let scaleFactor = 2;
 
@@ -154,6 +154,22 @@ function juliaAnimation() {
 }
 
 const introductionEl = document.getElementById('introduction');
+
+introductionEl.innerHTML = `Welcome to MandelWeb!
+
+Clicking this closes this introduction panel, however if you have never used this before it is recommended you read below.
+
+Keyboard Controls:
+<kbd>Ctrl</kbd> + <kbd>+</kbd> or <kbd>Z</kbd>: Zoom In
+<kbd>Ctrl</kbd> + <kbd>-</kbd> or <kbd>X</kbd>: Zoom Out
+
+<kbd>W</kbd> or <kbd>🠩</kbd>: Move / Pan Up
+<kbd>A</kbd> or <kbd>🠨</kbd>: Move / Pan Left
+<kbd>S</kbd> or <kbd>🠫</kbd>: Move / Pan Down
+<kbd>D</kbd> or <kbd>🠪</kbd>: Move / Pan Right
+
+<kbd>H</kbd>: Hide Settings Panel (top left)
+<kbd>Shift</kbd> + <kbd>H</kbd>: Hide Locations (top right)`; // Parcel compacts / removes spacing of text
 
 introductionEl.onclick = () => {
   introductionEl.style.display = 'none';

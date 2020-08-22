@@ -254,7 +254,7 @@ pub fn gen_data(linesBetweenColumns: bool, useBorderTracing: bool, maxIteration:
 
   let mut i = 0;
 
-  /*if !useBorderTracing {
+  if !useBorderTracing {
     for y in 0..height {
       for x in 0..renderWidth {
         let iteration = calc_pixel(&tracingGlobal, x + xOffset, y); //calc_pixel(maxIteration, x + xOffset, y, actualWidth, height, xCam, yCam, scale);
@@ -280,7 +280,7 @@ pub fn gen_data(linesBetweenColumns: bool, useBorderTracing: bool, maxIteration:
     }
 
     return pixels;
-  }*/
+  }
   
 
   let refcell: Rc<RefCell<TracingGlobal>> = Rc::new(RefCell::new(tracingGlobal));

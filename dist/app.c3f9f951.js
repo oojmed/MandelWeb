@@ -1,0 +1,1026 @@
+// modules are defined as an array
+// [ module function, map of requires ]
+//
+// map of requires is short require name -> numeric require
+//
+// anything defined in a previous bundle is accessed via the
+// orig method which is the require for previous bundles
+parcelRequire = (function (modules, cache, entry, globalName) {
+  // Save the require from previous bundle to this closure if any
+  var previousRequire = typeof parcelRequire === 'function' && parcelRequire;
+  var nodeRequire = typeof require === 'function' && require;
+
+  function newRequire(name, jumped) {
+    if (!cache[name]) {
+      if (!modules[name]) {
+        // if we cannot find the module within our internal map or
+        // cache jump to the current global require ie. the last bundle
+        // that was added to the page.
+        var currentRequire = typeof parcelRequire === 'function' && parcelRequire;
+        if (!jumped && currentRequire) {
+          return currentRequire(name, true);
+        }
+
+        // If there are other bundles on this page the require from the
+        // previous one is saved to 'previousRequire'. Repeat this as
+        // many times as there are bundles until the module is found or
+        // we exhaust the require chain.
+        if (previousRequire) {
+          return previousRequire(name, true);
+        }
+
+        // Try the node require function if it exists.
+        if (nodeRequire && typeof name === 'string') {
+          return nodeRequire(name);
+        }
+
+        var err = new Error('Cannot find module \'' + name + '\'');
+        err.code = 'MODULE_NOT_FOUND';
+        throw err;
+      }
+
+      localRequire.resolve = resolve;
+      localRequire.cache = {};
+
+      var module = cache[name] = new newRequire.Module(name);
+
+      modules[name][0].call(module.exports, localRequire, module, module.exports, this);
+    }
+
+    return cache[name].exports;
+
+    function localRequire(x){
+      return newRequire(localRequire.resolve(x));
+    }
+
+    function resolve(x){
+      return modules[name][1][x] || x;
+    }
+  }
+
+  function Module(moduleName) {
+    this.id = moduleName;
+    this.bundle = newRequire;
+    this.exports = {};
+  }
+
+  newRequire.isParcelRequire = true;
+  newRequire.Module = Module;
+  newRequire.modules = modules;
+  newRequire.cache = cache;
+  newRequire.parent = previousRequire;
+  newRequire.register = function (id, exports) {
+    modules[id] = [function (require, module) {
+      module.exports = exports;
+    }, {}];
+  };
+
+  var error;
+  for (var i = 0; i < entry.length; i++) {
+    try {
+      newRequire(entry[i]);
+    } catch (e) {
+      // Save first error but execute all entries
+      if (!error) {
+        error = e;
+      }
+    }
+  }
+
+  if (entry.length) {
+    // Expose entry point to Node, AMD or browser globals
+    // Based on https://github.com/ForbesLindesay/umd/blob/master/template.js
+    var mainExports = newRequire(entry[entry.length - 1]);
+
+    // CommonJS
+    if (typeof exports === "object" && typeof module !== "undefined") {
+      module.exports = mainExports;
+
+    // RequireJS
+    } else if (typeof define === "function" && define.amd) {
+     define(function () {
+       return mainExports;
+     });
+
+    // <script>
+    } else if (globalName) {
+      this[globalName] = mainExports;
+    }
+  }
+
+  // Override the current require with this new one
+  parcelRequire = newRequire;
+
+  if (error) {
+    // throw error from earlier, _after updating parcelRequire_
+    throw error;
+  }
+
+  return newRequire;
+})({"js/wasmHandler.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.setHandlerSetting = setHandlerSetting;
+exports.setWorkerSettings = setWorkerSettings;
+exports.init = init;
+exports.renderFrame = renderFrame;
+exports.failedToGetThreadCount = exports.multithreadingAmount = exports.combineMultithreadedData = void 0;
+let combineMultithreadedData = true;
+exports.combineMultithreadedData = combineMultithreadedData;
+let multithreadingWorkers = [];
+let multithreadingAmount = navigator.hardwareConcurrency || 4; // Use 4 if can't get CPU core / thread count
+
+exports.multithreadingAmount = multithreadingAmount;
+let failedToGetThreadCount = navigator.hardwareConcurrency === undefined;
+exports.failedToGetThreadCount = failedToGetThreadCount;
+let ctx;
+/*let linesBetweenColumns = false;
+export function setLinesBetweenColumns(val) { // Allowing setting it externally
+  linesBetweenColumns = val;
+}*/
+
+const webworkerLoaded = w => new Promise(r => w.addEventListener("message", r, {
+  once: true
+}));
+
+async function setHandlerSetting(name, val) {
+  switch (name) {
+    case 'combineMultithreadedData':
+      exports.combineMultithreadedData = combineMultithreadedData = val;
+      break;
+  }
+}
+
+async function setWorkerSettings(name, val) {
+  for (let i = 0; i < multithreadingAmount; i++) {
+    multithreadingWorkers[i].postMessage([name, val]);
+  }
+}
+
+async function init(_ctx, loadingCallback = () => {}) {
+  loadingCallback('Loading multithreading workers');
+  let startTime = performance.now();
+  ctx = _ctx;
+  let loads = [];
+
+  for (let i = 0; i < multithreadingAmount; i++) {
+    loadingCallback(`Spawning worker ${i + 1}`);
+    let worker = new Worker("/wasmMultithread.123b6b95.js");
+    worker.onmessage = handleMultithreaderReturn;
+    multithreadingWorkers.push(worker);
+    loads.push(webworkerLoaded(worker));
+  }
+
+  for (let i = 0; i < multithreadingAmount; i++) {
+    loadingCallback(`Waiting for worker ${i + 1} to load`);
+    await loads[i];
+  }
+
+  loadingCallback('Loaded all multithreading workers');
+  return performance.now() - startTime; //await Promise.all(loads);
+  //console.log(`${(performance.now() - startTime).toFixed(2)}ms`);
+  //await (new Promise(resolve => setTimeout(resolve, 1000)));
+}
+
+let combineImageData;
+let combineImageDataIndex;
+
+function handleMultithreaderReturn(e) {
+  if (e.data === 'loaded') return;
+  let [i, width, height, data] = e.data;
+  let startX = i * width;
+  let imageData = new ImageData(data, width, height);
+
+  if (combineMultithreadedData) {
+    combineImageData[combineImageDataIndex] = [imageData, startX];
+    combineImageDataIndex++;
+
+    if (combineImageDataIndex === multithreadingAmount) {
+      for (let i = 0; i < multithreadingAmount; i++) {
+        ctx.putImageData(combineImageData[i][0], combineImageData[i][1], 0);
+      }
+    }
+
+    return;
+  }
+
+  ctx.putImageData(imageData, startX, 0);
+}
+
+async function renderFrame(width, height, xCam, yCam, scale) {
+  combineImageData = Array(multithreadingAmount);
+  combineImageDataIndex = 0;
+  let stripWidth = Math.floor(width / multithreadingAmount); //let stripCurrent = 0;
+
+  let waits = [];
+
+  for (let i = 0; i < multithreadingAmount; i++) {
+    multithreadingWorkers[i].postMessage([i, stripWidth, width, height, xCam, yCam, scale]); //stripCurrent += stripWidth;
+
+    waits.push(webworkerLoaded(multithreadingWorkers[i]));
+  }
+
+  await Promise.all(waits); //module.render_frame(ctx, width, height, xCam, yCam, scale);
+}
+},{"./wasmMultithread.js":[["wasmMultithread.123b6b95.js","js/wasmMultithread.js"],"wasmMultithread.123b6b95.js.map",["Cargo.6f04ccae.toml","../wasm/Cargo.toml"],"js/wasmMultithread.js"]}],"js/app.js":[function(require,module,exports) {
+"use strict";
+
+var WasmHandler = _interopRequireWildcard(require("./wasmHandler"));
+
+function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return null; var cache = new WeakMap(); _getRequireWildcardCache = function () { return cache; }; return cache; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
+
+(async function () {
+  let canvas, ctx;
+  const timeSinceStart = performance.now();
+  const version = 'v3.0.0';
+  let scaleFactor = 2;
+  let width = 0;
+  let height = 0;
+  let frame = 0;
+  let fpsArr = new Array(10);
+  let xCam = 0;
+  let yCam = 0;
+  let scale = 1.2;
+  let keys = [];
+  let autozoom = false;
+  let autozoomSpeed = 1;
+  let autozoomInterval;
+  let locations = [// TODO: Require adding +0.5 to all X due to xCam shift in Rust instead of in JS
+  {
+    name: 'Overview',
+    xCam: 0,
+    yCam: 0,
+    scale: 1.2
+  }, {
+    name: 'Left Mandelbrots',
+    xCam: -1.16,
+    yCam: 0,
+    scale: 0.20
+  }, {
+    name: 'Main Left Mandelbrot',
+    xCam: -1.26,
+    yCam: 0,
+    scale: 0.03
+  }, {
+    name: 'A Right Mandelbrot',
+    xCam: 0.9322,
+    yCam: 0.2278,
+    scale: 0.003
+  }, {
+    name: 'A Top Mandelbrot',
+    xCam: 0.339195,
+    yCam: -1.0338,
+    scale: 0.01203
+  }, {
+    name: 'Main Left Left Left Mandelbrot',
+    xCam: -1.2877647,
+    yCam: 0.00000030719355,
+    scale: 0.0000059845
+  }];
+  let juliaSelection = 0;
+  const juliaXEl = document.getElementById('juliaX');
+  const juliaYEl = document.getElementById('juliaY');
+  juliaXEl.oninput = updateJuliaVectorFromSliders;
+  juliaYEl.oninput = updateJuliaVectorFromSliders;
+
+  function setJuliaVector() {
+    let x = 0;
+    let y = 0;
+
+    switch (juliaSelection) {
+      case 0:
+        //x = 0;
+        //y = 0;
+        break;
+
+      case 1:
+        x = -0.4;
+        y = 0.6;
+        break;
+
+      case 2:
+        x = 0.285; // y = 0;
+
+        break;
+
+      case 3:
+        x = 0.285;
+        y = 0.01;
+        break;
+
+      case 4:
+        x = 0.45;
+        y = 0.1428;
+        break;
+
+      case 5:
+        x = -0.70176;
+        y = -0.3842;
+        break;
+
+      case 6:
+        x = -0.835;
+        y = -0.2321;
+        break;
+
+      case 7:
+        x = -0.8;
+        y = 0.156;
+        break;
+
+      case 8:
+        x = -0.7269;
+        y = 0.1889;
+        break;
+
+      case 9:
+      default:
+        // x = 0;
+        y = -0.8;
+        break;
+    }
+
+    juliaXEl.value = x;
+    juliaYEl.value = y;
+    updateJuliaVectorFromSliders();
+  }
+
+  let juliaAnimationState = true;
+  let juliaAnimationFirst = true;
+
+  function juliaAnimation() {
+    if (juliaAnimationFirst) {
+      maxIterationEl.value = 10;
+    }
+
+    if (juliaAnimationState) {
+      juliaXEl.value = parseFloat(juliaXEl.value) - 0.04;
+      if (juliaXEl.value < -1.9) juliaAnimationState = false;
+    } else {
+      juliaXEl.value = parseFloat(juliaXEl.value) + 0.04;
+      if (juliaXEl.value > -0.05) juliaAnimationState = true;
+    }
+
+    setMaxIterationFromSlider();
+    updateJuliaVectorFromSliders(); //requestAnimationFrame(juliaAnimation);
+
+    if (juliaXEl.value < 0.6) {//juliaXEl.value = juliaXEl.value + 0.01;
+    }
+  }
+
+  const introductionEl = document.getElementById('introduction');
+  introductionEl.innerHTML = `Welcome to MandelWeb!
+
+Clicking this closes this introduction panel, however if you have never used this before it is recommended you read below.
+
+Keyboard Controls:
+<kbd>Ctrl</kbd> + <kbd>+</kbd> or <kbd>Z</kbd>: Zoom In
+<kbd>Ctrl</kbd> + <kbd>-</kbd> or <kbd>X</kbd>: Zoom Out
+
+<kbd>W</kbd> or <kbd>🠩</kbd>: Move / Pan Up
+<kbd>A</kbd> or <kbd>🠨</kbd>: Move / Pan Left
+<kbd>S</kbd> or <kbd>🠫</kbd>: Move / Pan Down
+<kbd>D</kbd> or <kbd>🠪</kbd>: Move / Pan Right
+
+<kbd>H</kbd>: Hide Settings Panel (top left)
+<kbd>Shift</kbd> + <kbd>H</kbd>: Hide Locations (top right)`; // Parcel compacts / removes spacing of text
+
+  introductionEl.onclick = () => {
+    introductionEl.style.display = 'none';
+  };
+
+  function updateJuliaVectorFromSliders() {
+    WasmHandler.setWorkerSettings('juliaVectorX', parseFloat(juliaXEl.value));
+    WasmHandler.setWorkerSettings('juliaVectorY', parseFloat(juliaYEl.value));
+  }
+
+  const locationsEl = document.getElementById('locations');
+
+  function generateLocationButtons() {
+    for (let loc of locations) {
+      let el = document.createElement('button');
+      el.textContent = loc.name;
+
+      el.onclick = function () {
+        gotoLocation(this.textContent);
+      };
+
+      locationsEl.appendChild(el);
+    }
+  }
+
+  generateLocationButtons();
+  const locationInterpolateProgressBarEl = document.getElementById('locationInterpolateProgressBar');
+  let transitionTopScale = 1.19;
+  let transitionSpeed = 1;
+
+  async function gotoLocation(locationName) {
+    let loc = locations.find(x => x.name === locationName);
+    let oXCam = Number(xCam);
+    let oYCam = Number(yCam);
+    let oScale = Number(scale);
+    locationInterpolateProgressBarEl.value = 0;
+    locationInterpolateProgressBarEl.className = 'show';
+    let t = 0;
+    let scaleT = 0;
+    let transitionPoint = [-1, 0];
+    let everZoomedOut = false;
+
+    while (t < 1 || scaleT < 1) {
+      /// || (xCam !== loc.xCam && yCam !== loc.yCam && scale !== loc.scale)) {
+      if (t < 1) {
+        xCam = bezierInterpolate(oXCam, loc.xCam, t);
+        yCam = bezierInterpolate(oYCam, loc.yCam, t);
+      }
+
+      if ((Math.abs(xCam - loc.xCam) > 0.8 || Math.abs(yCam - loc.yCam) > 0.8) && transitionTopScale > loc.scale && transitionTopScale > scale && transitionTopScale > oScale) {
+        everZoomedOut = true;
+
+        if (transitionPoint[0] !== 1) {
+          transitionPoint = [1, scale];
+          scaleT = 0;
+        }
+
+        scale = bezierInterpolate(transitionPoint[1], transitionTopScale, scaleT);
+      } else {
+        if (transitionPoint[0] !== 0) {
+          transitionPoint = [0, scale];
+          scaleT = 0;
+        }
+
+        scale = bezierInterpolate(transitionPoint[1], loc.scale, scaleT);
+      }
+
+      t += 0.005;
+      scaleT += everZoomedOut ? 0.007 : 0.005;
+      if (scaleT > 1) scaleT = 1;
+      if (t > 1) t = 1;
+      locationInterpolateProgressBarEl.value = bezierBlend(Math.min(t, 1));
+      await new Promise(resolve => setTimeout(resolve, 10 / transitionSpeed));
+    }
+
+    locationInterpolateProgressBarEl.className = ''; //gotoLocationInterval = setInterval(() => { stepToLocation(loc); }, 10);
+  }
+
+  let transitionSpeedEl = document.getElementById('transitionSpeed');
+
+  transitionSpeedEl.oninput = () => {
+    transitionSpeed = parseFloat(transitionSpeedEl.value);
+    console.log(transitionSpeed);
+  };
+
+  function bezierInterpolate(a, b, t) {
+    let bezierT = bezierBlend(t);
+    return (1 - bezierT) * a + bezierT * b;
+  }
+
+  function bezierBlend(t) {
+    return t * t * (3 - 2 * t);
+  }
+
+  function scaleCanvas() {
+    width = Math.floor(window.innerWidth / scaleFactor);
+    height = Math.floor(window.innerHeight / scaleFactor);
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.width = `${window.innerWidth}px`;
+    canvas.style.height = `${window.innerHeight}px`;
+  }
+
+  let loadingEl = document.getElementById('loading');
+  canvas = document.getElementById('canvas');
+  ctx = canvas.getContext('2d');
+  const multithreadingInitLoadTime = await WasmHandler.init(ctx, x => {
+    loadingEl.textContent = x;
+
+    if (x === 'Loaded all multithreading workers') {
+      loadingEl.textContent = x;
+    }
+  });
+  scaleCanvas();
+  window.onresize = scaleCanvas;
+
+  document.oncontextmenu = function (e) {
+    e.preventDefault();
+    return false;
+  };
+
+  function generateKeyName(e) {
+    return (e.ctrlKey ? 'ctrl_' : '') + (e.shiftKey ? 'shift_' : '') + e.key.toLowerCase();
+  }
+
+  document.onkeydown = function (e) {
+    let name = generateKeyName(e);
+    if (keys[name] !== 'override') keys[name] = true;
+
+    if (name === 'ctrl_=' || name === 'ctrl_-') {
+      e.preventDefault();
+    }
+  };
+
+  document.onkeyup = function (e) {
+    keys[generateKeyName(e)] = false;
+  };
+
+  let dragging = false;
+  let lastDragX = 0;
+  let lastDragY = 0;
+
+  function mousePanAmount() {
+    return 0.0025 * scale;
+  }
+
+  function mouseDownHandler(e) {
+    if (e.which === 3) {
+      // Right click - auto zoom
+      if (autozoom === false) {
+        autozoom = {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          deltaY: -autozoomSpeed
+        };
+        autozoomInterval = setInterval(() => {
+          wheelHandler(autozoom);
+        }, 10);
+      } else {
+        clearInterval(autozoomInterval);
+        autozoom = false;
+      }
+
+      return;
+    }
+
+    dragging = true;
+    lastDragX = e.clientX;
+    lastDragY = e.clientY; //WasmHandler.setHandlerSetting('combineMultithreadedData', true);
+  }
+
+  function mouseMoveHandler(e) {
+    if (!dragging) return; //let diffX = x - lastDragX;
+    //let diffY = y - lastDragY;
+
+    let mouseInMandelBeforeX = scaleX(e.clientX / scaleFactor) - xCam;
+    let mouseInMandelBeforeY = scaleY(e.clientY / scaleFactor) - yCam;
+
+    if (lastDragX === 0 && lastDragY === 0) {
+      lastDragX = mouseInMandelBeforeX;
+      lastDragY = mouseInMandelBeforeY;
+    }
+
+    console.log(mouseInMandelBeforeX, lastDragX);
+    console.log(mouseInMandelBeforeY, lastDragY);
+    xCam -= mouseInMandelBeforeX - lastDragX; // * mousePanAmount();
+
+    yCam -= mouseInMandelBeforeY - lastDragY; // * mousePanAmount();
+
+    lastDragX = mouseInMandelBeforeX;
+    lastDragY = mouseInMandelBeforeY;
+  }
+
+  function mouseUpHandler(e) {
+    dragging = false; //WasmHandler.setHandlerSetting('combineMultithreadedData', false);
+  }
+
+  function scaleX(x) {
+    return (x / (width / 3.5) - 1.75) * scale + xCam;
+  }
+
+  function scaleY(y) {
+    return (y / (height / 2.0) - 1.0) * scale + yCam;
+  }
+
+  function wheelHandler(e) {
+    let zoom = e.deltaY * 0.001; //xCam -= ((scaleX(e.clientX / scaleFactor) * zoom) - xCam) / scaleFactor;
+
+    let mouseInMandelBeforeX = scaleX(e.clientX / scaleFactor) - xCam;
+    let mouseInMandelBeforeY = scaleY(e.clientY / scaleFactor) - yCam; //console.log(mouseInMandelBeforeX);
+
+    scale *= 1 + zoom;
+    xCam -= scaleX(e.clientX / scaleFactor) - xCam - mouseInMandelBeforeX;
+    yCam -= scaleY(e.clientY / scaleFactor) - yCam - mouseInMandelBeforeY; //let diffX = (scaleX(e.clientX / scaleFactor) - xCam) + mouseInMandelBeforeX;
+    //console.log(diffX)
+    //xCam += diffX;
+    //xCam -= scaleX(e.clientX) * zoom / scaleFactor;
+    //xCam = xCam - scaleX(e.clientX / window.innerWidth * (sWidthAfter - sWidthBefore));
+    //yCam = yCam - scaleY(e.clientY / window.innerHeight * (sHeightAfter - sHeightBefore));
+
+    if (e.preventDefault) e.preventDefault();
+  }
+
+  canvas.onmousedown = mouseDownHandler;
+  canvas.onmousemove = mouseMoveHandler;
+  canvas.onmouseup = mouseUpHandler;
+  canvas.onwheel = wheelHandler;
+  let lastUpdateTime = performance.now();
+  let panAmount = 0.02;
+
+  function scalePanAmount() {
+    return panAmount * scale;
+  }
+
+  let settingsEl = document.getElementById('settings');
+  let locationsContainerEl = document.getElementById('locationsContainer');
+  let introIterationAnimation = true;
+  let settingsShowing = true;
+
+  async function update() {
+    let timeNow = performance.now();
+    let deltaTime = (timeNow - lastUpdateTime) / 1000;
+    lastUpdateTime = timeNow; //juliaAnimation();
+
+    fpsArr.push(Math.round(1 / deltaTime));
+    if (fpsArr.length > 10) fpsArr.shift();
+
+    if (introIterationAnimation) {
+      let newValue = parseInt(maxIterationEl.value);
+      maxIterationEl.value = Math.ceil(newValue * 1.15); // > 100 ? newValue + 7 : newValue;
+
+      if (newValue > 500) {
+        // || Object.values(keys).some((x) => x)) { // If maxIteration reaches 500 or any keys pressed
+        maxIterationEl.value = 500;
+        introIterationAnimation = false;
+      }
+
+      setMaxIterationFromSlider();
+    }
+
+    if (keys['w'] || keys['arrowup']) {
+      yCam -= scalePanAmount();
+    }
+
+    if (keys['s'] || keys['arrowdown']) {
+      yCam += scalePanAmount();
+    }
+
+    if (keys['a'] || keys['arrowleft']) {
+      xCam -= scalePanAmount();
+    }
+
+    if (keys['d'] || keys['arrowright']) {
+      xCam += scalePanAmount();
+    }
+
+    if (keys['z'] || keys['ctrl_=']) {
+      scale *= 0.99;
+    }
+
+    if (keys['x'] || keys['ctrl_-']) {
+      scale *= 1.01;
+    }
+
+    if (keys['0'] === true) {
+      gotoLocation(locations[0].name);
+      keys['0'] = 'override';
+    }
+
+    if (keys[']'] === true) {
+      juliaSelection++;
+      if (juliaSelection > 9) juliaSelection = 0;
+      setJuliaVector();
+      keys[']'] = 'override';
+    }
+
+    if (keys['h'] === true) {
+      settingsShowing = !settingsShowing;
+      settingsEl.style.display = settingsShowing ? 'block' : 'none';
+      keys['h'] = 'override';
+    }
+
+    if (keys['shift_h'] === true) {
+      locationsContainerEl.style.display = locationsContainerEl.style.display === 'block' ? 'none' : 'block';
+      keys['shift_h'] = 'override';
+    }
+
+    await WasmHandler.renderFrame(width, height, xCam, yCam, scale);
+    frame++;
+    if (settingsShowing) drawDebug();
+    requestAnimationFrame(update);
+  }
+
+  let debugEl = document.getElementById('debug');
+  let resScaleEl = document.getElementById('resScale');
+
+  resScaleEl.oninput = () => {
+    scaleFactor = resScaleEl.value;
+    scaleCanvas();
+  };
+
+  let maxIterationEl = document.getElementById('maxIteration');
+
+  function setMaxIterationFromSlider() {
+    WasmHandler.setWorkerSettings('maxIteration', maxIterationEl.value);
+    WasmHandler.setWorkerSettings('maxIterationColorScale', 255 / maxIterationEl.value);
+  }
+
+  maxIterationEl.oninput = setMaxIterationFromSlider;
+  let autozoomSpeedEl = document.getElementById('autozoomSpeed');
+
+  autozoomSpeedEl.oninput = () => {
+    autozoomSpeed = autozoomSpeedEl.value;
+    if (autozoom !== false) autozoom.deltaY = -autozoomSpeed;
+  };
+
+  let linesBetweenEl = document.getElementById('linesBetween');
+
+  linesBetweenEl.oninput = () => {
+    WasmHandler.setWorkerSettings('linesBetweenMultithreadColumns', linesBetweenEl.checked);
+  };
+
+  let borderTracingEl = document.getElementById('borderTracing');
+
+  borderTracingEl.oninput = () => {
+    WasmHandler.setWorkerSettings('useBorderTracing', borderTracingEl.checked);
+  };
+
+  let combineDataEl = document.getElementById('combineData');
+
+  combineDataEl.oninput = () => {
+    WasmHandler.setHandlerSetting('combineMultithreadedData', combineDataEl.checked);
+  };
+
+  function arrAverage(arr) {
+    return arr.reduce((a, b) => a + b) / arr.length;
+  }
+
+  async function drawDebug() {
+    let fps = Math.round(arrAverage(fpsArr));
+    debugEl.textContent = `${version}
+
+Load Time - ${startLoadTime.toFixed(2)}ms:
+  Multithreading: ${multithreadingInitLoadTime.toFixed(2)}ms
+
+Frames: ${frame}, FPS: ${fps}
+
+Position Information:
+  Camera Position: ${xCam.toPrecision(8)}, ${yCam.toPrecision(8)}
+  Scale: ${scale.toPrecision(8)}
+
+Resolution:
+  Scaled: ${width}x${height}
+  Scale Factor: ${scaleFactor}
+  Raw: ${window.innerWidth}x${window.innerHeight}
+
+Multithreading:
+  Workers (Threads): ${WasmHandler.multithreadingAmount} (Assumed: ${WasmHandler.failedToGetThreadCount})
+
+Memory (Heap): ${(window.performance.memory.usedJSHeapSize / 1000000).toFixed(2)}MB used / ${(window.performance.memory.totalJSHeapSize / 1000000).toFixed(2)}MB total`;
+  }
+  /*async function autoGeneratePerformance() {
+    let times = [];
+  
+    for (let i = 0; i < 2; i++) {
+      let startTime = performance.now();
+  
+      await WasmHandler.renderFrame(width, height, xCam, yCam, scale);
+  
+      times.push(performance.now() - startTime);
+    }
+  
+    let timeTaken = arrAverage(times);
+  
+    loadingEl.textContent = `Auto modifying values for good performance... (${timeTaken.toFixed(0)}ms / ${(1000 / 15).toFixed(0)}ms)`;
+  
+    if (timeTaken < 1000 / 15) {
+      let current = Number(maxIterationEl.value);
+      maxIterationEl.value = current + 20; //(parseInt(maxIterationEl.value) - 5).toString();
+      setMaxIterationFromSlider();
+  
+      await (new Promise(resolve => setTimeout(resolve, 10)));
+  
+      await autoGeneratePerformance();
+    }
+  }*/
+
+  /*async function increaseMaxIterationAnimation() {
+    await (new Promise(resolve => setTimeout(resolve, 200)));
+  
+    if (maxIterationEl.value < 500) {
+      maxIterationEl.value = parseInt(maxIterationEl.value) + 10;
+      console.log(maxIterationEl.value);
+      setMaxIterationFromSlider();
+  
+      //await (new Promise(resolve => setTimeout(resolve, 100)));
+  
+      await increaseMaxIterationAnimation();
+    }
+  }*/
+
+
+  loadingEl.className = 'hide'; //increaseMaxIterationAnimation();
+  //loadingEl.textContent = 'Auto modifying values for good performance...';
+  //await autoGeneratePerformance();
+
+  const startLoadTime = performance.now() - timeSinceStart;
+  update();
+})();
+},{"./wasmHandler":"js/wasmHandler.js"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+var global = arguments[3];
+var OVERLAY_ID = '__parcel__error__overlay__';
+var OldModule = module.bundle.Module;
+
+function Module(moduleName) {
+  OldModule.call(this, moduleName);
+  this.hot = {
+    data: module.bundle.hotData,
+    _acceptCallbacks: [],
+    _disposeCallbacks: [],
+    accept: function (fn) {
+      this._acceptCallbacks.push(fn || function () {});
+    },
+    dispose: function (fn) {
+      this._disposeCallbacks.push(fn);
+    }
+  };
+  module.bundle.hotData = null;
+}
+
+module.bundle.Module = Module;
+var checkedAssets, assetsToAccept;
+var parent = module.bundle.parent;
+
+if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
+  var hostname = "" || location.hostname;
+  var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "41693" + '/');
+
+  ws.onmessage = function (event) {
+    checkedAssets = {};
+    assetsToAccept = [];
+    var data = JSON.parse(event.data);
+
+    if (data.type === 'update') {
+      var handled = false;
+      data.assets.forEach(function (asset) {
+        if (!asset.isNew) {
+          var didAccept = hmrAcceptCheck(global.parcelRequire, asset.id);
+
+          if (didAccept) {
+            handled = true;
+          }
+        }
+      }); // Enable HMR for CSS by default.
+
+      handled = handled || data.assets.every(function (asset) {
+        return asset.type === 'css' && asset.generated.js;
+      });
+
+      if (handled) {
+        console.clear();
+        data.assets.forEach(function (asset) {
+          hmrApply(global.parcelRequire, asset);
+        });
+        assetsToAccept.forEach(function (v) {
+          hmrAcceptRun(v[0], v[1]);
+        });
+      } else if (location.reload) {
+        // `location` global exists in a web worker context but lacks `.reload()` function.
+        location.reload();
+      }
+    }
+
+    if (data.type === 'reload') {
+      ws.close();
+
+      ws.onclose = function () {
+        location.reload();
+      };
+    }
+
+    if (data.type === 'error-resolved') {
+      console.log('[parcel] ✨ Error resolved');
+      removeErrorOverlay();
+    }
+
+    if (data.type === 'error') {
+      console.error('[parcel] 🚨  ' + data.error.message + '\n' + data.error.stack);
+      removeErrorOverlay();
+      var overlay = createErrorOverlay(data);
+      document.body.appendChild(overlay);
+    }
+  };
+}
+
+function removeErrorOverlay() {
+  var overlay = document.getElementById(OVERLAY_ID);
+
+  if (overlay) {
+    overlay.remove();
+  }
+}
+
+function createErrorOverlay(data) {
+  var overlay = document.createElement('div');
+  overlay.id = OVERLAY_ID; // html encode message and stack trace
+
+  var message = document.createElement('div');
+  var stackTrace = document.createElement('pre');
+  message.innerText = data.error.message;
+  stackTrace.innerText = data.error.stack;
+  overlay.innerHTML = '<div style="background: black; font-size: 16px; color: white; position: fixed; height: 100%; width: 100%; top: 0px; left: 0px; padding: 30px; opacity: 0.85; font-family: Menlo, Consolas, monospace; z-index: 9999;">' + '<span style="background: red; padding: 2px 4px; border-radius: 2px;">ERROR</span>' + '<span style="top: 2px; margin-left: 5px; position: relative;">🚨</span>' + '<div style="font-size: 18px; font-weight: bold; margin-top: 20px;">' + message.innerHTML + '</div>' + '<pre>' + stackTrace.innerHTML + '</pre>' + '</div>';
+  return overlay;
+}
+
+function getParents(bundle, id) {
+  var modules = bundle.modules;
+
+  if (!modules) {
+    return [];
+  }
+
+  var parents = [];
+  var k, d, dep;
+
+  for (k in modules) {
+    for (d in modules[k][1]) {
+      dep = modules[k][1][d];
+
+      if (dep === id || Array.isArray(dep) && dep[dep.length - 1] === id) {
+        parents.push(k);
+      }
+    }
+  }
+
+  if (bundle.parent) {
+    parents = parents.concat(getParents(bundle.parent, id));
+  }
+
+  return parents;
+}
+
+function hmrApply(bundle, asset) {
+  var modules = bundle.modules;
+
+  if (!modules) {
+    return;
+  }
+
+  if (modules[asset.id] || !bundle.parent) {
+    var fn = new Function('require', 'module', 'exports', asset.generated.js);
+    asset.isNew = !modules[asset.id];
+    modules[asset.id] = [fn, asset.deps];
+  } else if (bundle.parent) {
+    hmrApply(bundle.parent, asset);
+  }
+}
+
+function hmrAcceptCheck(bundle, id) {
+  var modules = bundle.modules;
+
+  if (!modules) {
+    return;
+  }
+
+  if (!modules[id] && bundle.parent) {
+    return hmrAcceptCheck(bundle.parent, id);
+  }
+
+  if (checkedAssets[id]) {
+    return;
+  }
+
+  checkedAssets[id] = true;
+  var cached = bundle.cache[id];
+  assetsToAccept.push([bundle, id]);
+
+  if (cached && cached.hot && cached.hot._acceptCallbacks.length) {
+    return true;
+  }
+
+  return getParents(global.parcelRequire, id).some(function (id) {
+    return hmrAcceptCheck(global.parcelRequire, id);
+  });
+}
+
+function hmrAcceptRun(bundle, id) {
+  var cached = bundle.cache[id];
+  bundle.hotData = {};
+
+  if (cached) {
+    cached.hot.data = bundle.hotData;
+  }
+
+  if (cached && cached.hot && cached.hot._disposeCallbacks.length) {
+    cached.hot._disposeCallbacks.forEach(function (cb) {
+      cb(bundle.hotData);
+    });
+  }
+
+  delete bundle.cache[id];
+  bundle(id);
+  cached = bundle.cache[id];
+
+  if (cached && cached.hot && cached.hot._acceptCallbacks.length) {
+    cached.hot._acceptCallbacks.forEach(function (cb) {
+      cb();
+    });
+
+    return true;
+  }
+}
+},{}]},{},["../node_modules/parcel-bundler/src/builtins/hmr-runtime.js","js/app.js"], null)
+//# sourceMappingURL=/app.c3f9f951.js.map
