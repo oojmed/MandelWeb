@@ -1,5 +1,26 @@
 # MandelWeb Changelog
 
+## v4.0.0
+
+### UI
+
+- Added options for:
+  - Histogram Coloring
+  - Smooth Coloring
+
+- Removed option for border tracing
+- Upped upper limit for max iterations
+- Disabled intro animation
+- Reorganised top left panel into sections
+
+
+### Rust WASM
+
+- Added histogram coloring (WIP)
+- Added smooth coloring (WIP)
+
+
+
 ## v3.0.1
 
 ### UI

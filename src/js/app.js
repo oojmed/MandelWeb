@@ -3,7 +3,7 @@ import * as WasmHandler from './wasmHandler';
 (async function () { let canvas, ctx;
 const timeSinceStart = performance.now();
 
-const version = 'v3.0.1';
+const version = 'v4.0.0';
 
 let scaleFactor = 2;
 
@@ -430,7 +430,7 @@ function scalePanAmount() {
 let settingsEl = document.getElementById('settings');
 let locationsContainerEl = document.getElementById('locationsContainer');
 
-let introIterationAnimation = true;
+let introIterationAnimation = false;
 
 let settingsShowing = true;
 
@@ -443,18 +443,6 @@ async function update() {
 
   fpsArr.push(Math.round(1 / deltaTime));
   if (fpsArr.length > 10) fpsArr.shift();
-
-  if (introIterationAnimation) {
-    let newValue = parseInt(maxIterationEl.value);
-    maxIterationEl.value = Math.ceil(newValue * 1.15); // > 100 ? newValue + 7 : newValue;
-
-    if (newValue > 500) { // || Object.values(keys).some((x) => x)) { // If maxIteration reaches 500 or any keys pressed
-      maxIterationEl.value = 500;
-      introIterationAnimation = false;
-    }
-
-    setMaxIterationFromSlider();
-  }
 
   if (keys['w'] || keys['arrowup']) {
     yCam -= scalePanAmount();
@@ -509,6 +497,18 @@ async function update() {
 
   await WasmHandler.renderFrame(width, height, xCam, yCam, scale);
 
+  if (introIterationAnimation) {
+    let newValue = parseInt(maxIterationEl.value);
+    maxIterationEl.value = Math.ceil(newValue * 1.5); // > 100 ? newValue + 7 : newValue;
+
+    if (newValue > 300) { // || Object.values(keys).some((x) => x)) { // If maxIteration reaches 500 or any keys pressed
+      maxIterationEl.value = 1000;
+      introIterationAnimation = false;
+    }
+
+    await setMaxIterationFromSlider();
+  }
+
   frame++;
 
   if (settingsShowing) drawDebug();
@@ -528,9 +528,9 @@ resScaleEl.oninput = () => {
 
 let maxIterationEl = document.getElementById('maxIteration');
 
-function setMaxIterationFromSlider() {
-  WasmHandler.setWorkerSettings('maxIteration', maxIterationEl.value);
-  WasmHandler.setWorkerSettings('maxIterationColorScale', 255 / maxIterationEl.value);
+async function setMaxIterationFromSlider() {
+  await WasmHandler.setWorkerSettings('maxIteration', maxIterationEl.value);
+  await WasmHandler.setWorkerSettings('maxIterationColorScale', 255 / maxIterationEl.value);
 }
 
 maxIterationEl.oninput = setMaxIterationFromSlider;
@@ -548,10 +548,16 @@ linesBetweenEl.oninput = () => {
   WasmHandler.setWorkerSettings('linesBetweenMultithreadColumns', linesBetweenEl.checked);
 };
 
-let borderTracingEl = document.getElementById('borderTracing');
+let histogramColoringEl = document.getElementById('histogramColoring');
 
-borderTracingEl.oninput = () => {
-  WasmHandler.setWorkerSettings('useBorderTracing', borderTracingEl.checked);
+histogramColoringEl.oninput = () => {
+  WasmHandler.setWorkerSettings('usehistogramColoring', histogramColoringEl.checked);
+};
+
+let smoothColoringEl = document.getElementById('smoothColoring');
+
+smoothColoringEl.oninput = () => {
+  WasmHandler.setWorkerSettings('useSmoothColoring', smoothColoringEl.checked);
 };
 
 let combineDataEl = document.getElementById('combineData');
@@ -584,9 +590,9 @@ Resolution:
   Raw: ${window.innerWidth}x${window.innerHeight}
 
 Multithreading:
-  Workers (Threads): ${WasmHandler.multithreadingAmount} (Assumed: ${WasmHandler.failedToGetThreadCount})
+  Workers (Threads): ${WasmHandler.multithreadingAmount} (Assumed: ${WasmHandler.failedToGetThreadCount})`;
 
-Memory (Heap): ${(window.performance.memory.usedJSHeapSize / 1000000).toFixed(2)}MB used / ${(window.performance.memory.totalJSHeapSize / 1000000).toFixed(2)}MB total`;
+//Memory (Heap): ${(window.performance.memory.usedJSHeapSize / 1000000).toFixed(2)}MB used / ${(window.performance.memory.totalJSHeapSize / 1000000).toFixed(2)}MB total`;
 }
 
 /*async function autoGeneratePerformance() {
@@ -640,4 +646,19 @@ loadingEl.className = 'hide';
 const startLoadTime = performance.now() - timeSinceStart;
 
 update();
+
+var coll = document.getElementsByClassName("collapsible");
+var i;
+
+for (i = 0; i < coll.length; i++) {
+  coll[i].addEventListener("click", function() {
+    this.classList.toggle("active");
+    var content = this.nextElementSibling;
+    if (content.style.maxHeight) {
+      content.style.maxHeight = null;
+    } else {
+      content.style.maxHeight = "none"; //content.scrollHeight + "px";
+    }
+  });
+}
 })();

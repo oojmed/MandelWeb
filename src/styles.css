@@ -1,7 +1,6 @@
 html, body {
     background-color: #111111;
     color: rgba(255, 255, 255, .97);
-    font-family: Roboto, sans-serif;
     
     overflow: hidden;
     
@@ -9,6 +8,10 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
+}
+
+* {
+    font-family: Roboto, sans-serif;
 }
 
 body > canvas {
@@ -24,9 +27,9 @@ body > canvas {
     top: 10px;
     left: 10px;
 
-    padding: 10px;
-
     z-index: 5;
+
+    padding: 0 !important;
 }
 
 input {
@@ -67,7 +70,7 @@ input {
     background-color: rgba(0, 0, 0, .6);
     border: 3px solid rgba(50, 50, 50, .6);
 
-    padding: 5px;
+    padding: 10px;
 
     user-select: none;
 }
@@ -92,8 +95,6 @@ input {
     position: absolute;
     right: 10px;
     top: 10px;
-    
-    padding: 10px;
     
     width: 20%;
 }
@@ -149,7 +150,6 @@ input {
     border: 2px solid rgba(0, 0, 0, .8);
     background-color: rgba(255, 255, 255, .1);
 
-    font-family: Roboto, sans-serif;
     font-size: 14px;
 
     outline: none !important;
@@ -210,4 +210,66 @@ kbd {
 
     border-radius: 6px;
     box-shadow: inset 0 -1px 0 rgb(47, 51, 53);
+}
+
+
+.collapsible {
+    background-color: rgba(0, 0, 0, .2);
+    color: white;
+    cursor: pointer;
+    padding: 8px 12px;
+    width: 100%;
+    border: none;
+    text-align: left;
+    outline: none;
+    font-size: 15px;
+}
+  
+.active, .collapsible:hover {
+    background-color: rgba(0, 0, 0, .4);
+}
+
+.collapsible.active + .content {
+    padding: 10px;
+}
+  
+.collapsible:after {
+    content: '\002B';
+    color: white;
+    font-weight: bold;
+    float: right;
+    margin-left: 5px;
+}
+  
+.active:after {
+    content: "\2212";
+}
+  
+.content {
+    max-height: 0;
+    overflow: hidden;
+
+    padding: 0 10px;
+
+    transition: padding 0.2s ease-out;
+
+    background-color: rgba(255, 255, 255, .05);
+}
+
+.content > .collapsible, .content > .content {
+    position: relative;
+    left: -10px;
+
+    width: calc(100% + 20px);
+}
+
+.separator {
+    height: 10px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.no-bottom-padding {
+    padding-bottom: 0 !important;
 }

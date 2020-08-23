@@ -21,10 +21,34 @@ export async function setHandlerSetting(name, val) {
   }
 }
 
+let cloneUseHistogramColoring = false;
+
 export async function setWorkerSettings(name, val) {
   for (let i = 0; i < multithreadingAmount; i++) {
-    multithreadingWorkers[i].postMessage([name, val]);
+    multithreadingWorkers[i].postMessage(['set', name, val]);
   }
+
+  switch (name) {
+    case 'useHistogramColoring':
+      cloneUseHistogramColoring = val;
+      break;
+    case 'maxIterationColorScale':
+      return; // Don't update histo colors for updating the normal color scale
+  }
+
+  await updateHistoColors();
+
+  //updateHistoColors();
+}
+
+let updateHistoColorTimeout;
+
+export async function getWorkerSettings(name) {
+  multithreadingWorkers[0].postMessage(['get', name, undefined]);
+
+  await webworkerLoaded(multithreadingWorkers[0]);
+
+  return lastGotWorkerSetting;
 }
 
 export async function init(_ctx, loadingCallback = () => {}) {
@@ -64,8 +88,26 @@ export async function init(_ctx, loadingCallback = () => {}) {
 
 let combineImageData;
 let combineImageDataIndex;
+
+let histoColors = [];
+let lastGotWorkerSetting;
+
 function handleMultithreaderReturn(e) {
   if (e.data === 'loaded') return;
+
+  if (e.data.length === 1) {
+    histoColors = e.data[0];
+
+    //console.log('aa', e.data);
+
+    return;
+  }
+
+  if (e.data.length === 2) {
+    lastGotWorkerSetting = e.data[1];
+
+    return;
+  }
 
   let [i, width, height, data] = e.data;
 
@@ -89,7 +131,36 @@ function handleMultithreaderReturn(e) {
   ctx.putImageData(imageData, startX, 0);
 }
 
+let lastWidth = 0;
+let lastHeight = 0;
+
+async function updateHistoColors() {
+  //if (multithreadingWorkers[0] === undefined) return;
+  if (!cloneUseHistogramColoring) {
+    //return;
+  }
+
+  console.log(lastWidth, lastHeight);
+
+  multithreadingWorkers[0].postMessage([lastWidth, lastHeight]);
+
+  await webworkerLoaded(multithreadingWorkers[0]);
+}
+
 export async function renderFrame(width, height, xCam, yCam, scale) {
+  if (lastWidth !== width || lastHeight !== height || histoColors.length === 0) {
+    lastWidth = width;
+    lastHeight = height;
+
+    await updateHistoColors();
+    //console.log(histoColors);
+    //if (histoColors.length === 0) await promise;
+  }
+
+  //console.log(histoColors);
+
+  //console.log(histoColors);
+
   combineImageData = Array(multithreadingAmount);
   combineImageDataIndex = 0;
 
@@ -98,7 +169,7 @@ export async function renderFrame(width, height, xCam, yCam, scale) {
   //let stripCurrent = 0;
   let waits = [];
   for (let i = 0; i < multithreadingAmount; i++) {
-    multithreadingWorkers[i].postMessage([i, stripWidth, width, height, xCam, yCam, scale]);
+    multithreadingWorkers[i].postMessage([i, stripWidth, width, height, xCam, yCam, scale, histoColors]);
 
     //stripCurrent += stripWidth;
 

@@ -33,19 +33,40 @@
     </div>
 
     <div id="settings">
-        <div id="debug"></div>
-        Resolution Scale <input type="range" value=2 min=0.5 max=5 step=0.1 id="resScale"> <br> <br>
+        <button class="collapsible">Debug</button>
+        <div class="content">
+            <div id="debug"></div>
+        </div>
 
-        Max Iteration <input type="range" value=1 min=1 max=1500 step=1 id="maxIteration"> <br>
-        Border Tracing <input checked type="checkbox" id="borderTracing"> <br> <br>
+        <button class="collapsible">Settings</button>
+        <div class="content no-bottom-padding">
+            Resolution Scale <input type="range" value=2 min=0.5 max=5 step=0.1 id="resScale"> <br>
+            Max Iteration <input type="range" value=500 min=1 max=1500 step=1 id="maxIteration">
+            <div class="separator"></div>
 
-        Julia Vector X <input type="range" value=0 min=-2 max=0.5 step=0.01 id="juliaX"> <br>
-        Julia Vector Y <input type="range" value=0 min=-2 max=0.5 step=0.01 id="juliaY"> <br> <br>
+            <button class="collapsible">Coloring</button>
+            <div class="content">
+                Histogram Coloring <input type="checkbox" id="histogramColoring"> <br>
+                Smooth Coloring <input type="checkbox" id="smoothColoring">
+            </div>
 
-        Lines Between Multithread Columns <input type="checkbox" id="linesBetween"> <br>
-        Combine Multithreading Data <input checked type="checkbox" id="combineData"> <br> <br>
+            <button class="collapsible">Julia</button>
+            <div class="content">
+                Julia Vector X <input type="range" value=0 min=-2 max=0.5 step=0.01 id="juliaX"> <br>
+                Julia Vector Y <input type="range" value=0 min=-2 max=0.5 step=0.01 id="juliaY">
+            </div>
 
-        Autozoom Speed <input type="range" value=1 min=-3 max=3 step=0.1 id="autozoomSpeed">
+            <button class="collapsible">Debug</button>
+            <div class="content">
+                Lines Between Multithread Columns <input type="checkbox" id="linesBetween"> <br>
+                Combine Multithreading Data <input checked type="checkbox" id="combineData"> <br>
+            </div>
+
+            <button class="collapsible">Controls</button>
+            <div class="content">
+                Autozoom Speed <input type="range" value=1 min=-3 max=3 step=0.1 id="autozoomSpeed">
+            </div>
+        </div>
     </div>
 
     <progress id="locationInterpolateProgressBar" min=0 value=0 max=1></progress>
